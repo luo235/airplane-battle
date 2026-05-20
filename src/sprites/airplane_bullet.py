@@ -1,0 +1,24 @@
+import pygame
+from pygame.sprite import Sprite 
+
+class Bullet(Sprite):
+    def __init__(self, ai_game):
+        super().__init__()
+        self.screen = ai_game.screen
+        self.settings = ai_game.settings
+        self.bullet_color = self.settings.bullet_color
+        self.rect = pygame.Rect(0, 0, self.settings.bullet_width, self.settings.bullet_height)
+        self.rect.midtop = ai_game.airplane.rect.midtop
+        self.x = float(self.rect.x)
+        self.y = float(self.rect.y)
+        self.atk = self.settings.airplane_bullet_atk
+        self.direction = 0  
+
+    def update(self):
+        self.y -= self.settings.bullet_speed
+        self.x += self.settings.bullet_speed * 0.25 * self.direction
+        self.rect.x = self.x
+        self.rect.y = self.y
+
+    def draw_bullet(self):
+        pygame.draw.rect(self.screen, self.bullet_color, self.rect)
