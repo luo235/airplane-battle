@@ -1,0 +1,54 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip python3-venv git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev
+
+      - name: Install Buildozer
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install buildozer cython virtualenv
+
+      - name: Create buildozer.spec if missing
+        working-directory: src
+        run: |
+          if [ ! -f buildozer.spec ]; then
+            buildozer init
+          fi
+
+      - name: Patch buildozer.spec
+        working-directory: src
+        run: |
+          sed -i 's/^title = .*/title = Airplane Battle/' buildozer.spec
+          sed -i 's/^package.name = .*/package.name = airplanebattle/' buildozer.spec
+          sed -i 's/^package.domain = .*/package.domain = org.luo235/' buildozer.spec
+          sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,jpeg,bmp,wav,ogg,txt/' buildozer.spec
+          sed -i 's/^requirements = .*/requirements = python3,pygame,numpy/' buildozer.spec
+          sed -i 's/^orientation = .*/orientation = portrait/' buildozer.spec
+          sed -i 's/^fullscreen = .*/fullscreen = 1/' buildozer.spec
+          sed -i 's/^# android.archs = .*/android.archs = arm64-v8a, armeabi-v7a/' buildozer.spec
+
+      - name: Build APK
+        working-directory: src
+        run: |
+          buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: airplane-battle-apk
+          path: src/bin/*.apk
