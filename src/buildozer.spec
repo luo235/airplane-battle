@@ -23,8 +23,10 @@ source.exclude_dirs = __pycache__,.git,.github,.venv,venv,build,dist,p4a-recipes
 version = 1.0
 
 # (list) Application requirements
-# pygame uses python-for-android's SDL2 bootstrap/recipes.
-requirements = python3,pygame
+# pygame-ce 2.4.0's generated C sources still include longintrepr.h,
+# which fails against python-for-android's current Python 3.11 target.
+# Pin target and host Python to 3.10.12 for the Android build.
+requirements = python3==3.10.12,hostpython3==3.10.12,pygame
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
