@@ -9,7 +9,11 @@ class PygameRecipe(CompiledComponentsPythonRecipe):
 
     version = "2.4.0"
     url = "https://github.com/pygame-community/pygame-ce/archive/{version}.tar.gz"
-    site_packages_name = "pygame-ce"
+    # pygame-ce installs an import package named "pygame". python-for-android
+    # copies the built package by this directory name, not by the PyPI
+    # distribution name, so using "pygame-ce" here makes the APK build fail
+    # after compilation when p4a cannot find the installed site-packages dir.
+    site_packages_name = "pygame"
     name = "pygame"
     depends = [
         "sdl2",

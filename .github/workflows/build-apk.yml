@@ -80,6 +80,7 @@ jobs:
           grep -Eq '^android.accept_sdk_license = True$' src/buildozer.spec
           grep -Eq '^android.archs = arm64-v8a$' src/buildozer.spec
           grep -Eq '^p4a.local_recipes = ./p4a-recipes$' src/buildozer.spec
+          grep -Eq '^    site_packages_name = "pygame"$' src/p4a-recipes/pygame/__init__.py
           test -f src/p4a-recipes/pygame/__init__.py
           ! grep -Eq '(^|[=,[:space:]])numpy($|[,[:space:]])' requirements.txt src/buildozer.spec
 
@@ -97,6 +98,14 @@ jobs:
           if [ -f build-apk.log ]; then
             tail -n 250 build-apk.log
           fi
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: airplane-battle-build-log
+          path: build-apk.log
+          if-no-files-found: ignore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
