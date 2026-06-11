@@ -76,7 +76,7 @@ jobs:
           test -f src/main.py
           test -d src/resource/images
           test -d src/resource/sound
-          grep -Eq '^requirements = python3,pygame$' src/buildozer.spec
+          grep -Eq '^requirements = python3==3\.10\.12,hostpython3==3\.10\.12,pygame$' src/buildozer.spec
           grep -Eq '^android.accept_sdk_license = True$' src/buildozer.spec
           grep -Eq '^android.archs = arm64-v8a$' src/buildozer.spec
           grep -Eq '^p4a.local_recipes = ./p4a-recipes$' src/buildozer.spec
