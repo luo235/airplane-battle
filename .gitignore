@@ -5,3 +5,7 @@ __pycache__/
 .venv/
 .idea/
 .DS_Store
+.buildozer/
+src/.buildozer/
+src/bin/
+build-apk.log
