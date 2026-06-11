@@ -6,7 +6,6 @@ from sprites.enemy_bullets import EnemyBullet
 from ui.button import Button
 from animation import Animation
 import random
-import datetime
 from sprites.boss import Boss
 import math
 #遗传算法用的ai

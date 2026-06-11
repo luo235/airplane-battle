@@ -3,58 +3,104 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, work ]
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Free runner disk space
+        run: |
+          set -euxo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk /opt/ghc || true
+          df -h
+
       - name: Install system dependencies
         run: |
-          sudo apt update
-          sudo apt install -y python3-pip python3-venv git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev build-essential ccache
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf \
+            automake \
+            build-essential \
+            ccache \
+            cmake \
+            git \
+            libffi-dev \
+            libltdl-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libssl-dev \
+            libtool \
+            openjdk-17-jdk \
+            patch \
+            pkg-config \
+            python3-pip \
+            python3-setuptools \
+            python3-venv \
+            unzip \
+            zip \
+            zlib1g-dev
 
       - name: Install Buildozer
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install buildozer cython virtualenv
+          set -euxo pipefail
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install --upgrade buildozer cython virtualenv
+          buildozer --version
 
-      - name: Create buildozer.spec if missing
-        working-directory: src
+      - name: Cache Buildozer and python-for-android downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            src/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('src/buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
+      - name: Verify Android packaging inputs
         run: |
-          if [ ! -f buildozer.spec ]; then
-            buildozer init
-          fi
-
-      - name: Patch buildozer.spec
-        working-directory: src
-        run: |
-          sed -i 's/^title = .*/title = Airplane Battle/' buildozer.spec
-          sed -i 's/^package.name = .*/package.name = airplanebattle/' buildozer.spec
-          sed -i 's/^package.domain = .*/package.domain = org.luo235/' buildozer.spec
-          sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,jpeg,bmp,wav,ogg,txt/' buildozer.spec
-          sed -i 's/^requirements = .*/requirements = python3==3.10.11,hostpython3==3.10.11,pygame/' buildozer.spec
-          sed -i 's/^orientation = .*/orientation = portrait/' buildozer.spec
-          sed -i 's/^fullscreen = .*/fullscreen = 1/' buildozer.spec
-          sed -i 's/^# android.archs = .*/android.archs = arm64-v8a, armeabi-v7a/' buildozer.spec
-
-          if grep -q "android.accept_sdk_license" buildozer.spec; then
-            sed -i 's/^#* *android.accept_sdk_license = .*/android.accept_sdk_license = True/' buildozer.spec
-          else
-            echo "android.accept_sdk_license = True" >> buildozer.spec
-          fi
+          set -euxo pipefail
+          test -f src/main.py
+          test -d src/resource/images
+          test -d src/resource/sound
+          grep -Eq '^requirements = python3,pygame$' src/buildozer.spec
+          grep -Eq '^android.accept_sdk_license = True$' src/buildozer.spec
+          grep -Eq '^android.archs = arm64-v8a$' src/buildozer.spec
+          grep -Eq '^p4a.local_recipes = ./p4a-recipes$' src/buildozer.spec
+          test -f src/p4a-recipes/pygame/__init__.py
+          ! grep -Eq '(^|[=,[:space:]])numpy($|[,[:space:]])' requirements.txt src/buildozer.spec
 
       - name: Build APK
         working-directory: src
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
-          yes | buildozer android debug
+          set -o pipefail
+          yes | buildozer android debug 2>&1 | tee ../build-apk.log
+
+      - name: Show final build log lines on failure
+        if: failure()
+        run: |
+          if [ -f build-apk.log ]; then
+            tail -n 250 build-apk.log
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: airplane-battle-apk
           path: src/bin/*.apk
+          if-no-files-found: error
