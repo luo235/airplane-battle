@@ -89,7 +89,8 @@ jobs:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           set -o pipefail
-          yes | buildozer android debug 2>&1 | tee ../build-apk.log
+          (yes || true) | buildozer android debug 2>&1 | tee ../build-apk.log
+          ls -lh bin/*.apk
 
       - name: Show final build log lines on failure
         if: failure()
