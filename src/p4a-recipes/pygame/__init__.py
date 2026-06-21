@@ -1,5 +1,6 @@
 from os.path import join
 
+from pythonforandroid.logger import info
 from pythonforandroid.recipe import CompiledComponentsPythonRecipe
 from pythonforandroid.toolchain import current_directory
 
@@ -30,6 +31,22 @@ class PygameRecipe(CompiledComponentsPythonRecipe):
     def prebuild_arch(self, arch):
         super().prebuild_arch(arch)
         with current_directory(self.get_build_dir(arch.arch)):
+            setup_py = "setup.py"
+            setup_source = open(setup_py).read()
+            patched_source = setup_source.replace(
+                "distutils.ccompiler.spawn(cmd, dry_run=self.dry_run, **kwargs)",
+                "distutils.spawn.spawn(cmd, dry_run=self.dry_run, **kwargs)",
+            )
+            if "import distutils.spawn" not in patched_source:
+                patched_source = patched_source.replace(
+                    "import distutils.ccompiler\n",
+                    "import distutils.ccompiler\nimport distutils.spawn\n",
+                    1,
+                )
+            if patched_source != setup_source:
+                open(setup_py, "w").write(patched_source)
+            info("pygame setup.py compatibility patch applied")
+
             setup_template = open(join("buildconfig", "Setup.Android.SDL2.in")).read()
             env = self.get_recipe_env(arch)
             env["ANDROID_ROOT"] = join(self.ctx.ndk.sysroot, "usr")
