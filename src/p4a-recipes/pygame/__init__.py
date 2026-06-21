@@ -1,3 +1,4 @@
+import re
 from os.path import join
 
 from pythonforandroid.logger import info
@@ -34,13 +35,22 @@ class PygameRecipe(CompiledComponentsPythonRecipe):
             setup_py = "setup.py"
             setup_source = open(setup_py).read()
             patched_source = setup_source
+            spawn_replacement = (
+                'if getattr(self, "dry_run", False):\n'
+                '    return\n'
+                'distutils.spawn.spawn(cmd, **kwargs)'
+            )
             for spawn_call in (
-                "distutils.ccompiler.spawn(cmd, dry_run=self.dry_run, **kwargs)",
-                "distutils.spawn.spawn(cmd, dry_run=self.dry_run, **kwargs)",
+                r"distutils\.ccompiler\.spawn\(cmd, dry_run=self\.dry_run, \*\*kwargs\)",
+                r"distutils\.spawn\.spawn\(cmd, dry_run=self\.dry_run, \*\*kwargs\)",
+                r"distutils\.spawn\.spawn\(cmd, dry_run=getattr\(self, [\"']dry_run[\"'], False\), \*\*kwargs\)",
             ):
-                patched_source = patched_source.replace(
-                    spawn_call,
-                    "distutils.spawn.spawn(cmd, dry_run=getattr(self, \"dry_run\", False), **kwargs)",
+                patched_source = re.sub(
+                    rf"^(?P<indent>[ \t]*){spawn_call}",
+                    lambda match: match.group("indent")
+                    + spawn_replacement.replace("\n", "\n" + match.group("indent")),
+                    patched_source,
+                    flags=re.MULTILINE,
                 )
             if "import distutils.spawn" not in patched_source:
                 patched_source = patched_source.replace(
