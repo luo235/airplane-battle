@@ -65,7 +65,6 @@ jobs:
             ~/.buildozer
             ~/.gradle/caches
             ~/.gradle/wrapper
-            src/.buildozer
           key: ${{ runner.os }}-buildozer-${{ hashFiles('src/buildozer.spec', 'src/p4a-recipes/pygame/__init__.py') }}
           restore-keys: |
             ${{ runner.os }}-buildozer-
