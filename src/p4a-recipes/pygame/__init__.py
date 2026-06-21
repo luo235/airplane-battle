@@ -33,10 +33,15 @@ class PygameRecipe(CompiledComponentsPythonRecipe):
         with current_directory(self.get_build_dir(arch.arch)):
             setup_py = "setup.py"
             setup_source = open(setup_py).read()
-            patched_source = setup_source.replace(
+            patched_source = setup_source
+            for spawn_call in (
                 "distutils.ccompiler.spawn(cmd, dry_run=self.dry_run, **kwargs)",
                 "distutils.spawn.spawn(cmd, dry_run=self.dry_run, **kwargs)",
-            )
+            ):
+                patched_source = patched_source.replace(
+                    spawn_call,
+                    "distutils.spawn.spawn(cmd, dry_run=getattr(self, \"dry_run\", False), **kwargs)",
+                )
             if "import distutils.spawn" not in patched_source:
                 patched_source = patched_source.replace(
                     "import distutils.ccompiler\n",
